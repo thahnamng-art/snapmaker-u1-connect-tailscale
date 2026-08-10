@@ -1,0 +1,34 @@
+# Binaries and executables
+*.exe
+*.msi
+*.tgz
+*.tar.gz
+*.zip
+
+# plink binary downloaded locally
+plink.exe
+
+# Tailscale binaries
+tailscale
+tailscaled
+
+# Temp files
+*.tmp
+*.log
+*.bak
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Credentials / config (never commit passwords)
+*.env
+*.ini
+config.local.*

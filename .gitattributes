@@ -1,0 +1,12 @@
+# Line ending configuration
+# Shell scripts must use LF (Linux) line endings
+*.sh text eol=lf
+
+# PowerShell scripts can use CRLF (Windows) line endings
+*.ps1 text eol=crlf
+
+# Text files use LF
+*.md text eol=lf
+LICENSE text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
