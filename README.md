@@ -27,8 +27,10 @@ tailscale/
     ├── setup-tailscale-persist.sh  # Thiết lập Tailscale bền vững (chạy trên U1)
     ├── fix_rc_loc.sh               # Sửa rc.local dùng nohup (chạy trên U1)
     ├── check-tailscale.sh          # Kiểm tra trạng thái Tailscale (chạy trên U1)
+    ├── diagnose-tailscale.sh       # Chẩn đoán + tự động sửa lỗi (chạy trên U1)
     ├── fix-tailscale.ps1           # Sửa qua SSH từ Windows
-    └── run-fix.ps1                 # Chạy fix_rc_loc.sh qua plink từ Windows
+    ├── run-fix.ps1                 # Chạy fix_rc_loc.sh qua plink từ Windows
+    └── diagnose-tailscale.ps1      # Chạy diagnose-tailscale.sh từ Windows
 ```
 
 ## 🚀 Cách sử dụng
@@ -155,6 +157,44 @@ ssh root@192.168.1.81
 chmod +x /tmp/check-tailscale.sh
 /tmp/check-tailscale.sh
 ```
+
+## 🔧 Khắc phục khi mất IP sau reboot
+
+Nếu IP Tailscale (ví dụ `100.81.218.11`) không hoạt động sau khi khởi động lại máy in, hãy chạy script chẩn đoán:
+
+### Từ Windows (tự động)
+
+```powershell
+cd scripts
+.\diagnose-tailscale.ps1
+```
+
+Script sẽ tự động:
+1. Kiểm tra `/dev/net/tun` - tạo nếu thiếu
+2. Kiểm tra `tailscaled` - khởi động nếu chưa chạy
+3. Kiểm tra `/etc/rc.local` - sửa nếu chưa cấu hình đúng
+4. Kiểm tra kết nối Tailscale - chạy `tailscale up` nếu cần
+
+### Từ SSH trên máy in
+
+```bash
+# Copy script lên máy in
+scp scripts/diagnose-tailscale.sh root@192.168.1.81:/tmp/
+
+# SSH vào máy in và chạy
+ssh root@192.168.1.81
+chmod +x /tmp/diagnose-tailscale.sh
+/tmp/diagnose-tailscale.sh
+```
+
+### Nguyên nhân thường gặp
+
+| Nguyên nhân | Cách khắc phục |
+|-------------|----------------|
+| `/etc/rc.local` không chạy | Kiểm tra nội dung và permissions: `cat /etc/rc.local` |
+| `tailscaled` không khởi động | Chạy thủ công: `nohup tailscaled --tun=userspace-networking > /dev/null 2>&1 &` |
+| `/dev/net/tun` bị mất sau reboot | Thêm `mknod /dev/net/tun c 10 200` vào rc.local |
+| Tailscale chưa `up` | Chạy `tailscale up` và xác thực lại |
 
 ## 📄 License
 
