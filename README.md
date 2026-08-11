@@ -196,6 +196,60 @@ chmod +x /tmp/diagnose-tailscale.sh
 | `/dev/net/tun` bị mất sau reboot | Thêm `mknod /dev/net/tun c 10 200` vào rc.local |
 | Tailscale chưa `up` | Chạy `tailscale up` và xác thực lại |
 
+## 🚀 Auto-start sau reboot (Boot Hook)
+
+### Vấn đề OverlayFS
+
+Snapmaker U1 dùng OverlayFS với:
+- **Lower layer**: SquashFS (readonly) chứa hệ thống gốc
+- **Upper layer**: `/oem/overlay/upper/` (persistent)
+
+Khi boot, kernel gọi `/etc/init.d/rcS` **TRƯỚC** khi overlay mount. Do đó:
+- rcS đọc file stream từ SquashFS (readonly) một lần duy nhất
+- Glob expansion `/etc/init.d/S??*` chốt danh sách script từ đầu
+- Các script trong upper layer (như `S99tailscaled`) **không được chạy**
+
+### Giải pháp: Boot Hook
+
+Thay vì sửa rcS (không hiệu quả), ta **hook vào `S99_bootcontrol`** - một script đã tồn tại trên SquashFS và được gọi **SAU** khi overlay mount:
+
+```bash
+# Tạo file override trong upper layer
+# /oem/overlay/upper/etc/init.d/S99_bootcontrol
+#!/bin/sh
+case "$1" in
+    start)
+        if [ -x /etc/init.d/S99tailscaled ]; then
+            /etc/init.d/S99tailscaled start &
+        fi
+        ;;
+    stop)
+        if [ -x /etc/init.d/S99tailscaled ]; then
+            /etc/init.d/S99tailscaled stop
+        fi
+        ;;
+esac
+```
+
+Khi rcS gọi `/etc/init.d/S99_bootcontrol`, VFS tra cứu trên OverlayFS (đã active) → thực thi file từ upper layer → gọi `S99tailscaled start`.
+
+### Cài đặt boot hook
+
+```powershell
+cd scripts
+.\setup-boot-hook.ps1
+```
+
+### ⚠️ Lưu ý khi update firmware
+
+Nếu bạn **flash firmware mới qua USB**, partition `/oem` sẽ bị ghi đè → mất toàn bộ cấu hình. Sau khi flash, cần chạy lại:
+
+```powershell
+cd scripts
+.\run-install-persist.ps1   # Cài lại Tailscale
+.\setup-boot-hook.ps1       # Cài lại boot hook
+```
+
 ## 📄 License
 
 MIT License - Xem file [LICENSE](LICENSE) để biết chi tiết.
